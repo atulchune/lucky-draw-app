@@ -6,7 +6,6 @@ import { FlipCard } from './flip-card';
 import { AssignmentTable } from './assignment-table';
 import { Button } from '@/components/ui/button';
 import { shuffleArray } from '@/lib/game-utils';
-import { exportToPDF } from '@/lib/pdf-utils';
 
 type Assignment = {
   teamName: string;
@@ -17,7 +16,7 @@ type Assignment = {
 type Card = {
   id: string;
   teamName: string;
-  position: number;
+  position: number | null; // null until revealed
   isFlipped: boolean;
 };
 
@@ -28,6 +27,7 @@ type GameState = {
   team2Name: string;
   cards: Card[];
   assignments: Assignment[];
+  usedPositions: Record<string, number[]>; // team -> list of used positions
 };
 
 export function GameContainer() {
@@ -38,29 +38,30 @@ export function GameContainer() {
     team2Name: '',
     cards: [],
     assignments: [],
+    usedPositions: {},
   });
 
   const handleStartGame = (data: { playerCount: number; team1Name: string; team2Name: string }) => {
-    // Create N cards for each team (1 to N positions for each)
+    // Create N cards for each team with hidden positions
     const cards: Card[] = [];
     let cardId = 0;
 
-    // Team 1 cards
+    // Team 1 cards - positions hidden initially
     for (let i = 1; i <= data.playerCount; i++) {
       cards.push({
         id: `card-${cardId++}`,
         teamName: data.team1Name,
-        position: i,
+        position: null, // Hidden until revealed
         isFlipped: false,
       });
     }
 
-    // Team 2 cards
+    // Team 2 cards - positions hidden initially
     for (let i = 1; i <= data.playerCount; i++) {
       cards.push({
         id: `card-${cardId++}`,
         teamName: data.team2Name,
-        position: i,
+        position: null, // Hidden until revealed
         isFlipped: false,
       });
     }
@@ -72,16 +73,46 @@ export function GameContainer() {
       team2Name: data.team2Name,
       cards: shuffleArray(cards),
       assignments: [],
+      usedPositions: {
+        [data.team1Name]: [],
+        [data.team2Name]: [],
+      },
     });
   };
 
   const handleFlipCard = (cardId: string) => {
-    setState((prev) => ({
-      ...prev,
-      cards: prev.cards.map((card) =>
-        card.id === cardId ? { ...card, isFlipped: !card.isFlipped } : card
-      ),
-    }));
+    setState((prev) => {
+      const card = prev.cards.find((c) => c.id === cardId);
+      if (!card) return prev;
+
+      // If card is being flipped for the first time, assign random position
+      let updatedCard = { ...card };
+      let updatedUsedPositions = { ...prev.usedPositions };
+
+      if (card.position === null && !card.isFlipped) {
+        // Generate random position for this team
+        const usedForTeam = prev.usedPositions[card.teamName] || [];
+        const availablePositions = Array.from(
+          { length: prev.playerCount },
+          (_, i) => i + 1
+        ).filter((pos) => !usedForTeam.includes(pos));
+
+        if (availablePositions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availablePositions.length);
+          const randomPosition = availablePositions[randomIndex];
+          updatedCard.position = randomPosition;
+          updatedUsedPositions[card.teamName] = [...usedForTeam, randomPosition];
+        }
+      }
+
+      return {
+        ...prev,
+        usedPositions: updatedUsedPositions,
+        cards: prev.cards.map((c) =>
+          c.id === cardId ? { ...updatedCard, isFlipped: !updatedCard.isFlipped } : c
+        ),
+      };
+    });
   };
 
   const handleAssignPlayer = (cardId: string, playerName: string) => {
@@ -109,11 +140,8 @@ export function GameContainer() {
       team2Name: '',
       cards: [],
       assignments: [],
+      usedPositions: {},
     });
-  };
-
-  const handleExportPDF = () => {
-    exportToPDF(state.assignments, state.team1Name, state.team2Name);
   };
 
   const handleExportCSV = () => {
@@ -196,20 +224,12 @@ export function GameContainer() {
           {/* Control Buttons */}
           <div className="flex gap-4 justify-center flex-wrap">
             {state.assignments.length > 0 && (
-              <>
-                <Button
-                  onClick={handleExportPDF}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6"
-                >
-                  Export PDF
-                </Button>
-                <Button
-                  onClick={handleExportCSV}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6"
-                >
-                  Export CSV
-                </Button>
-              </>
+              <Button
+                onClick={handleExportCSV}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6"
+              >
+                Export CSV
+              </Button>
             )}
             <Button
               onClick={handleReset}

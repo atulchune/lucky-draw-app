@@ -67,12 +67,12 @@ export function FlipCard({
       {!displayFlipped ? (
         /* Front side - Compact view */
         <div
-          className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-white font-bold text-center hover:shadow-xl transition-shadow"
+          className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-white font-bold text-center hover:shadow-xl transition-shadow hover:from-blue-600 hover:to-blue-700"
           onClick={handleClick}
         >
           <div className="text-sm md:text-base">{teamName}</div>
-          <div className="text-2xl md:text-3xl font-black">{position}</div>
-          <div className="text-xs opacity-75 mt-1">Click to assign</div>
+          <div className="text-4xl md:text-5xl font-black">?</div>
+          <div className="text-xs opacity-75 mt-1">Click to reveal</div>
         </div>
       ) : (
         /* Back side - Expanded view with input */
@@ -84,7 +84,9 @@ export function FlipCard({
 
           <div className="text-center">
             <div className="text-sm opacity-75 text-white">Position</div>
-            <div className="text-4xl font-black text-white">{position}</div>
+            <div className="text-5xl font-black text-white animate-pulse">
+              {position || '?'}
+            </div>
           </div>
 
           <div className="border-t-2 border-white/30 pt-4 space-y-3">
