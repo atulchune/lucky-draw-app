@@ -6,6 +6,7 @@ import { FlipCard } from './flip-card';
 import { AssignmentTable } from './assignment-table';
 import { Button } from '@/components/ui/button';
 import { shuffleArray } from '@/lib/game-utils';
+import { generateTextFormat, copyToClipboard, printPDF } from '@/lib/export-utils';
 
 type Assignment = {
   teamName: string;
@@ -161,6 +162,21 @@ export function GameContainer() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    printPDF(state.assignments, state.team1Name, state.team2Name);
+  };
+
+  const handleCopyText = async () => {
+    const text = generateTextFormat(state.assignments, state.team1Name, state.team2Name);
+    try {
+      await copyToClipboard(text);
+      alert('Copied to clipboard! You can now paste it to WhatsApp or any messaging app.');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    }
+  };
+
   if (state.phase === 'setup') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -224,18 +240,32 @@ export function GameContainer() {
           {/* Control Buttons */}
           <div className="flex gap-4 justify-center flex-wrap">
             {state.assignments.length > 0 && (
-              <Button
-                onClick={handleExportCSV}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6"
-              >
-                Export CSV
-              </Button>
+              <>
+                <Button
+                  onClick={handleExportPDF}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 shadow-lg transition-all hover:shadow-xl"
+                >
+                  📄 Export PDF
+                </Button>
+                <Button
+                  onClick={handleCopyText}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 shadow-lg transition-all hover:shadow-xl"
+                >
+                  📋 Copy for WhatsApp
+                </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 shadow-lg transition-all hover:shadow-xl"
+                >
+                  📊 Export CSV
+                </Button>
+              </>
             )}
             <Button
               onClick={handleReset}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 shadow-lg transition-all hover:shadow-xl"
             >
-              Reset Game
+              🔄 Reset Game
             </Button>
           </div>
         </div>
