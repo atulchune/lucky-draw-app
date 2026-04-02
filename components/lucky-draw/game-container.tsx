@@ -6,6 +6,7 @@ import { FlipCard } from './flip-card';
 import { AssignmentTable } from './assignment-table';
 import { Button } from '@/components/ui/button';
 import { shuffleArray } from '@/lib/game-utils';
+import { exportToPDF } from '@/lib/pdf-utils';
 
 type Assignment = {
   teamName: string;
@@ -40,16 +41,29 @@ export function GameContainer() {
   });
 
   const handleStartGame = (data: { playerCount: number; team1Name: string; team2Name: string }) => {
-    // Create alternating team positions
-    const positions = Array.from({ length: data.playerCount }, (_, i) => i + 1);
-    const teams = [data.team1Name, data.team2Name];
-    
-    const cards = positions.map((position, index) => ({
-      id: `card-${index}`,
-      teamName: teams[index % 2],
-      position,
-      isFlipped: false,
-    }));
+    // Create N cards for each team (1 to N positions for each)
+    const cards: Card[] = [];
+    let cardId = 0;
+
+    // Team 1 cards
+    for (let i = 1; i <= data.playerCount; i++) {
+      cards.push({
+        id: `card-${cardId++}`,
+        teamName: data.team1Name,
+        position: i,
+        isFlipped: false,
+      });
+    }
+
+    // Team 2 cards
+    for (let i = 1; i <= data.playerCount; i++) {
+      cards.push({
+        id: `card-${cardId++}`,
+        teamName: data.team2Name,
+        position: i,
+        isFlipped: false,
+      });
+    }
 
     setState({
       phase: 'playing',
@@ -98,7 +112,11 @@ export function GameContainer() {
     });
   };
 
-  const handleExport = () => {
+  const handleExportPDF = () => {
+    exportToPDF(state.assignments, state.team1Name, state.team2Name);
+  };
+
+  const handleExportCSV = () => {
     const csv = [
       'Team,Position,Player Name',
       ...state.assignments
@@ -140,9 +158,17 @@ export function GameContainer() {
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2">
             Lucky Draw Game
           </h1>
-          <p className="text-slate-600 mb-4">
-            {state.assignments.length} / {state.playerCount} assignments completed
+          <p className="text-slate-600 mb-2">
+            {state.assignments.length} / {state.playerCount * 2} assignments completed
           </p>
+          <div className="flex justify-center gap-8 text-sm">
+            <div>
+              <span className="font-semibold text-blue-600">{state.team1Name}</span>: {state.assignments.filter((a) => a.teamName === state.team1Name).length} / {state.playerCount}
+            </div>
+            <div>
+              <span className="font-semibold text-amber-600">{state.team2Name}</span>: {state.assignments.filter((a) => a.teamName === state.team2Name).length} / {state.playerCount}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-8">
@@ -170,12 +196,20 @@ export function GameContainer() {
           {/* Control Buttons */}
           <div className="flex gap-4 justify-center flex-wrap">
             {state.assignments.length > 0 && (
-              <Button
-                onClick={handleExport}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6"
-              >
-                Export CSV
-              </Button>
+              <>
+                <Button
+                  onClick={handleExportPDF}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6"
+                >
+                  Export PDF
+                </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6"
+                >
+                  Export CSV
+                </Button>
+              </>
             )}
             <Button
               onClick={handleReset}

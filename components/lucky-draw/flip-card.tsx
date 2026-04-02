@@ -56,65 +56,49 @@ export function FlipCard({
   return (
     <div
       className={`
-        relative w-80 min-h-96 cursor-pointer
-        transition-transform duration-300 hover:scale-105
-        ${disabled ? 'opacity-75 cursor-not-allowed hover:scale-100' : ''}
+        relative w-full max-w-sm transition-all duration-300 cursor-pointer
+        ${!displayFlipped ? 'h-20' : 'h-auto'}
+        ${disabled ? 'opacity-75 cursor-not-allowed' : ''}
       `}
       style={{
         perspective: '1000px',
       }}
     >
-      <div
-        className={`
-          relative w-full h-full transition-transform duration-600
-        `}
-        style={{
-          transformStyle: 'preserve-3d',
-          transform: displayFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        }}
-      >
-        {/* Front side - Click to flip */}
+      {!displayFlipped ? (
+        /* Front side - Compact view */
         <div
-          className="absolute w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center text-white font-bold text-center"
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-          }}
+          className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-white font-bold text-center hover:shadow-xl transition-shadow"
           onClick={handleClick}
         >
-          <div className="text-2xl">Click to Flip</div>
+          <div className="text-sm md:text-base">{teamName}</div>
+          <div className="text-2xl md:text-3xl font-black">{position}</div>
+          <div className="text-xs opacity-75 mt-1">Click to assign</div>
         </div>
+      ) : (
+        /* Back side - Expanded view with input */
+        <div className="w-full bg-gradient-to-br from-amber-400 to-amber-500 rounded-lg shadow-lg p-6 space-y-4">
+          <div className="text-center">
+            <div className="text-sm opacity-75 text-white">Team</div>
+            <div className="text-2xl font-bold text-white">{teamName}</div>
+          </div>
 
-        {/* Back side - Team + Position + Input */}
-        <div
-          className="absolute w-full h-full bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center"
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-          }}
-        >
-          <div className="space-y-4 w-full">
-            <div className="text-center">
-              <div className="text-sm opacity-75 text-white">Team</div>
-              <div className="text-2xl font-bold text-white">{teamName}</div>
-            </div>
+          <div className="text-center">
+            <div className="text-sm opacity-75 text-white">Position</div>
+            <div className="text-4xl font-black text-white">{position}</div>
+          </div>
 
-            <div className="text-center">
-              <div className="text-sm opacity-75 text-white">Position</div>
-              <div className="text-5xl font-black text-white">{position}</div>
-            </div>
-
-            <div className="border-t-2 border-white/30 pt-4 space-y-3">
-              <label className="text-sm font-semibold text-white block">Assign Player</label>
-              <Input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Enter player name"
-                onKeyPress={(e) => e.key === 'Enter' && handleAssign()}
-                className="text-center text-lg"
-              />
+          <div className="border-t-2 border-white/30 pt-4 space-y-3">
+            <label className="text-sm font-semibold text-white block">Player Name</label>
+            <Input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Enter player name"
+              onKeyPress={(e) => e.key === 'Enter' && handleAssign()}
+              className="text-center text-base font-medium"
+              disabled={!!assignedPlayer}
+            />
+            {!assignedPlayer ? (
               <Button
                 onClick={handleAssign}
                 disabled={!playerName.trim()}
@@ -122,17 +106,22 @@ export function FlipCard({
               >
                 Save
               </Button>
-            </div>
-
-            {assignedPlayer && (
-              <div className="bg-white/20 rounded p-2 text-center">
-                <div className="text-xs text-white opacity-75">Assigned to</div>
-                <div className="text-sm font-bold text-white">{assignedPlayer}</div>
+            ) : (
+              <div className="bg-white/20 rounded p-3 text-center">
+                <div className="text-xs text-white opacity-75 mb-1">Assigned to</div>
+                <div className="text-base font-bold text-white">{assignedPlayer}</div>
               </div>
             )}
           </div>
+
+          <Button
+            onClick={handleClick}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2"
+          >
+            Close
+          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
