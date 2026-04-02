@@ -65,14 +65,12 @@ export function FlipCard({
       }}
     >
       {!displayFlipped ? (
-        /* Front side - Compact view */
+        /* Front side - Compact view with only ? */
         <div
           className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 flex flex-col items-center justify-center text-white font-bold text-center hover:shadow-xl transition-shadow hover:from-blue-600 hover:to-blue-700"
           onClick={handleClick}
         >
-          <div className="text-sm md:text-base">{teamName}</div>
-          <div className="text-4xl md:text-5xl font-black">?</div>
-          <div className="text-xs opacity-75 mt-1">Click to reveal</div>
+          <div className="text-5xl md:text-6xl font-black">?</div>
         </div>
       ) : (
         /* Back side - Expanded view with input */
