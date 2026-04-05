@@ -120,8 +120,33 @@ export default function ContestClient({
     }
   };
 
+  // Find all unique teams
+  const teams = Array.from(new Set(positions.map(p => p.team_name)));
+
+  const handleCopy = () => {
+    let clipboardText = `${document.title || 'Contest'} - Participants List\n\n`;
+
+    teams.forEach(team => {
+      clipboardText += `--- ${team} ---\n`;
+      const teamPositions = positions.filter(p => p.team_name === team).sort((a, b) => a.position_number - b.position_number);
+      teamPositions.forEach(p => {
+        const name = p.profiles?.full_name || p.assigned_user_id ? 'Participant' : 'Unassigned';
+        if (p.assigned_user_id) {
+          clipboardText += `Position ${p.position_number}: ${name}${p.winner_rank ? ` (Rank ${p.winner_rank})` : ''}\n`;
+        }
+      });
+      clipboardText += '\n';
+    });
+
+    navigator.clipboard.writeText(clipboardText).then(() => {
+      alert("List copied to clipboard!");
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {hasUserPickedCard && contestStatus === 'open' && (
         <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-6 py-4 rounded-lg font-bold text-center">
           You have successfully locked your card! Wait for the creator to announce winners.
@@ -140,6 +165,45 @@ export default function ContestClient({
             isClosed={contestStatus !== 'open'}
           />
         ))}
+      </div>
+
+      {/* Participants List */}
+      <div className="mt-16 bg-white rounded-xl shadow-sm border p-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-black text-slate-900">Participants List</h2>
+          <Button onClick={handleCopy} variant="outline" className="font-bold">
+            📋 Copy List
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {teams.map(team => {
+            const teamPositions = positions.filter(p => p.team_name === team && p.assigned_user_id).sort((a, b) => a.position_number - b.position_number);
+            
+            return (
+              <div key={team} className="bg-slate-50 rounded-lg p-6 border">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b-2 border-slate-200">{team}</h3>
+                {teamPositions.length === 0 ? (
+                  <p className="text-slate-500 italic text-sm">No members joined yet.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {teamPositions.map(p => (
+                      <li key={p.id} className="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-slate-400 w-6">#{p.position_number}</span>
+                          <span className="font-semibold text-slate-700">{p.profiles?.full_name || 'Participant'}</span>
+                        </div>
+                        {p.winner_rank && (
+                          <span className="text-xs font-bold text-yellow-800 bg-yellow-100 px-2 py-1 rounded">Rank {p.winner_rank}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

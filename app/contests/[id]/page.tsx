@@ -40,11 +40,31 @@ export default async function ContestDetailPage({
     redirect('/contests');
   }
 
-  // Fetch positions
-  const { data: positions } = await supabase
+  // Fetch positions without invalid profile relation
+  const { data: positionsData, error: posError } = await supabase
     .from('positions')
-    .select('*, profiles:assigned_user_id ( full_name )') // Fetch assigned user names
+    .select('*') 
     .eq('contest_id', id);
+
+  if (posError) console.error("Positions fetch error:", posError);
+
+  let positions = positionsData || [];
+  
+  // Hydrate profiles manually
+  const assigned_ids = positions.map(p => p.assigned_user_id).filter(Boolean);
+  if (assigned_ids.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', assigned_ids);
+
+    if (profiles) {
+      positions = positions.map(p => ({
+        ...p,
+        profiles: profiles.find(pr => pr.id === p.assigned_user_id) || null
+      }));
+    }
+  }
 
   // Check if user is creator
   const isCreator = contest.creator_id === user.id;
@@ -58,7 +78,7 @@ export default async function ContestDetailPage({
     .single();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-12 px-4">
+    <div className="min-h-screen bg-slate-50 py-12 px-4">
       <div className="container mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -67,7 +87,7 @@ export default async function ContestDetailPage({
               ← Back to Dashboard
             </Button>
           </Link>
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border p-8 mb-8">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h1 className="text-4xl font-black text-slate-900 mb-2">{contest.name}</h1>
@@ -84,7 +104,7 @@ export default async function ContestDetailPage({
               </div>
             </div>
 
-            {/* Contest Info - Hide Teams initially? User said: no team name no info of team and position. BUT maybe for the header it's fine, or we should hide it completely. Let's keep it minimal */}
+            {/* Contest Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <div className="bg-slate-100 rounded-lg p-4">
                 <div className="text-xs font-bold text-slate-700 uppercase">Positions per Team</div>
@@ -92,9 +112,9 @@ export default async function ContestDetailPage({
                   {contest.num_positions}
                 </div>
               </div>
-              <div className="bg-purple-100 rounded-lg p-4">
-                <div className="text-xs font-bold text-purple-700 uppercase">Total Cards</div>
-                <div className="text-lg font-bold text-purple-900">{contest.num_positions * 2}</div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <div className="text-xs font-bold text-blue-700 uppercase">Total Cards</div>
+                <div className="text-lg font-bold text-blue-900">{contest.num_positions * 2} Cards</div>
               </div>
             </div>
             {isCreator && contest.status === 'open' && (
@@ -112,7 +132,7 @@ export default async function ContestDetailPage({
           userId={user.id}
           userName={userName}
           contestStatus={contest.status}
-          initialPositions={positions || []}
+          initialPositions={positions}
         />
       </div>
     </div>
@@ -120,7 +140,6 @@ export default async function ContestDetailPage({
 }
 
 function ContestCloseButton({ contestId }: { contestId: string }) {
-  // We'll handle this in a client component or inline
   return (
     <form action={`/api/contests/${contestId}/close`} method="POST">
        <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold px-8">Save & Close Contest</Button>
