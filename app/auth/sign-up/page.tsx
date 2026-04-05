@@ -42,13 +42,14 @@ export default function Page() {
         options: {
           emailRedirectTo:
             process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/protected`,
+            `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`,
         },
       })
       if (error) throw error
       router.push('/auth/sign-up-success')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during sign up'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
