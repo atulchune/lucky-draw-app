@@ -26,7 +26,6 @@ export default function Page() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
@@ -43,20 +42,30 @@ export default function Page() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // 1. Register logic via our new server-side API (skips email confirmation)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create account')
+      }
+
+      // 2. Immediately log the user in
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard`,
-          data: {
-            full_name: fullName,
-          },
-        },
       })
-      if (error) throw error
-      router.push('/auth/sign-up-success')
+
+      if (signInError) throw signInError
+
+      // Use window.location.href to force a full refresh, bypassing cache so navbar picks up the logged in user correctly
+      window.location.href = '/dashboard'
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during sign up'
       setError(errorMessage)
