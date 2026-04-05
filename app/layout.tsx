@@ -7,9 +7,15 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Lucky Draw - Player Position Selector',
-  description: 'Interactive card flip game for randomly assigning player positions',
+  title: 'Lucky Draw Contests - Random Position Assignment',
+  description: 'Create exciting lucky draw contests with random position assignments. Perfect for team events, competitions, and fair winner selection.',
   generator: 'v0.app',
+  keywords: ['lucky draw', 'random selection', 'contests', 'team events', 'position assignment'],
+  openGraph: {
+    title: 'Lucky Draw Contests',
+    description: 'Create exciting lucky draw contests with random position assignments',
+    type: 'website',
+  },
   icons: {
     icon: [
       {
