@@ -74,6 +74,11 @@ export default async function DashboardPage() {
               Browse Contests
             </Button>
           </Link>
+          <Link href="/dashboard/history">
+            <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-3 px-8 rounded-lg shadow-lg">
+              View Contest History
+            </Button>
+          </Link>
         </div>
 
         {/* My Contests Section */}
