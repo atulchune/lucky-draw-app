@@ -20,6 +20,15 @@ export default async function ContestDetailPage({
     redirect('/auth/login');
   }
 
+  // Fetch user profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  const userName = profile?.full_name || user.email || 'User';
+
   // Fetch contest
   const { data: contest } = await supabase
     .from('contests')
@@ -34,10 +43,8 @@ export default async function ContestDetailPage({
   // Fetch positions
   const { data: positions } = await supabase
     .from('positions')
-    .select('*')
-    .eq('contest_id', id)
-    .order('team_name', { ascending: true })
-    .order('position_number', { ascending: true });
+    .select('*, profiles:assigned_user_id ( full_name )') // Fetch assigned user names
+    .eq('contest_id', id);
 
   // Check if user is creator
   const isCreator = contest.creator_id === user.id;
@@ -77,20 +84,12 @@ export default async function ContestDetailPage({
               </div>
             </div>
 
-            {/* Contest Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-blue-100 rounded-lg p-4">
-                <div className="text-xs font-bold text-blue-700 uppercase">Team 1</div>
-                <div className="text-lg font-bold text-blue-900">{contest.team1_name}</div>
-              </div>
-              <div className="bg-amber-100 rounded-lg p-4">
-                <div className="text-xs font-bold text-amber-700 uppercase">Team 2</div>
-                <div className="text-lg font-bold text-amber-900">{contest.team2_name}</div>
-              </div>
+            {/* Contest Info - Hide Teams initially? User said: no team name no info of team and position. BUT maybe for the header it's fine, or we should hide it completely. Let's keep it minimal */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <div className="bg-slate-100 rounded-lg p-4">
-                <div className="text-xs font-bold text-slate-700 uppercase">Positions</div>
+                <div className="text-xs font-bold text-slate-700 uppercase">Positions per Team</div>
                 <div className="text-lg font-bold text-slate-900">
-                  {contest.num_positions} each
+                  {contest.num_positions}
                 </div>
               </div>
               <div className="bg-purple-100 rounded-lg p-4">
@@ -98,35 +97,33 @@ export default async function ContestDetailPage({
                 <div className="text-lg font-bold text-purple-900">{contest.num_positions * 2}</div>
               </div>
             </div>
+            {isCreator && contest.status === 'open' && (
+              <div className="mt-6 flex justify-end">
+                 <ContestCloseButton contestId={id} />
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Action Buttons */}
-        {!isCreator && contest.status === 'open' && !participation && (
-          <div className="mb-8">
-            <Link href={`/contests/${id}/join`}>
-              <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 text-lg rounded-lg">
-                Join This Contest
-              </Button>
-            </Link>
-          </div>
-        )}
-
-        {participation && (
-          <div className="mb-8 bg-blue-100 border-2 border-blue-400 text-blue-700 px-6 py-4 rounded-lg font-bold">
-            You are participating in this contest
-          </div>
-        )}
 
         {/* Contest Client Component */}
         <ContestClient
           contestId={id}
           isCreator={isCreator}
           userId={user.id}
+          userName={userName}
           contestStatus={contest.status}
           initialPositions={positions || []}
         />
       </div>
     </div>
   );
+}
+
+function ContestCloseButton({ contestId }: { contestId: string }) {
+  // We'll handle this in a client component or inline
+  return (
+    <form action={`/api/contests/${contestId}/close`} method="POST">
+       <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold px-8">Save & Close Contest</Button>
+    </form>
+  )
 }
