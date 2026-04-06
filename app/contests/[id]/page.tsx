@@ -78,47 +78,47 @@ export default async function ContestDetailPage({
     .single();
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
-      <div className="container mx-auto">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 md:pb-12">
+      <div className="container mx-auto py-8 md:py-12 px-4 max-w-5xl">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/dashboard">
-            <Button variant="outline" className="mb-4">
-              ← Back to Dashboard
+          <Link href="/dashboard" className="inline-block mb-6">
+            <Button variant="ghost" className="text-slate-500 hover:text-slate-900 pl-0">
+              &larr; Back to Dashboard
             </Button>
           </Link>
-          <div className="bg-white rounded-xl shadow-sm border p-8 mb-8">
-            <div className="flex justify-between items-start mb-4">
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 md:p-8 mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
               <div>
-                <h1 className="text-4xl font-black text-slate-900 mb-2">{contest.name}</h1>
-                <p className="text-slate-600">{contest.description}</p>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">{contest.name}</h1>
+                <p className="text-slate-500 font-medium">{contest.description}</p>
               </div>
               <div
-                className={`px-4 py-2 rounded-full font-bold text-sm ${
+                className={`px-3 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider ${
                   contest.status === 'open'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-red-50 text-red-600'
                 }`}
               >
-                {contest.status === 'open' ? 'Open' : 'Closed'}
+                {contest.status}
               </div>
             </div>
 
             {/* Contest Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <div className="bg-slate-100 rounded-lg p-4">
-                <div className="text-xs font-bold text-slate-700 uppercase">Positions per Team</div>
-                <div className="text-lg font-bold text-slate-900">
-                  {contest.num_positions}
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 md:p-5">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Positions Focus</div>
+                <div className="text-xl md:text-2xl font-black text-slate-800">
+                  {contest.num_positions} / Team
                 </div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <div className="text-xs font-bold text-blue-700 uppercase">Total Cards</div>
-                <div className="text-lg font-bold text-blue-900">{contest.num_positions * 2} Cards</div>
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 md:p-5">
+                <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Total Cards</div>
+                <div className="text-xl md:text-2xl font-black text-blue-900">{contest.num_positions * 2} Cards</div>
               </div>
             </div>
             {isCreator && contest.status === 'open' && (
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
                  <ContestCloseButton contestId={id} />
               </div>
             )}
@@ -142,7 +142,9 @@ export default async function ContestDetailPage({
 function ContestCloseButton({ contestId }: { contestId: string }) {
   return (
     <form action={`/api/contests/${contestId}/close`} method="POST">
-       <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold px-8">Save & Close Contest</Button>
+       <Button type="submit" className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-8 rounded-xl h-12 shadow-sm transition-transform active:scale-[0.98]">
+         Close Contest Event
+       </Button>
     </form>
   )
 }

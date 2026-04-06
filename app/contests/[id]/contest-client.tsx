@@ -130,7 +130,7 @@ export default function ContestClient({
       clipboardText += `--- ${team} ---\n`;
       const teamPositions = positions.filter(p => p.team_name === team).sort((a, b) => a.position_number - b.position_number);
       teamPositions.forEach(p => {
-        const name = p.profiles?.full_name || p.assigned_user_id ? 'Participant' : 'Unassigned';
+        const name = p.profiles?.full_name || 'Participant';
         if (p.assigned_user_id) {
           clipboardText += `Position ${p.position_number}: ${name}${p.winner_rank ? ` (Rank ${p.winner_rank})` : ''}\n`;
         }
@@ -266,25 +266,29 @@ function CardComponent({
     );
   }
 
-  // Blind Card State
+  // Blind Card State with Flip Animation
   return (
     <div
       onClick={!isClosed && !loading ? onFlip : undefined}
-      className={`rounded-xl shadow-lg p-6 h-48 flex items-center justify-center transition-all ${
-        isClosed 
-          ? 'bg-slate-200 opacity-50 cursor-not-allowed' 
-          : 'bg-linear-to-br from-blue-500 to-indigo-600 cursor-pointer hover:shadow-2xl hover:scale-105 active:scale-95'
+      className={`relative w-full h-48 rounded-xl perspective-1000 ${
+        isClosed ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer group'
       }`}
     >
-      <div className="text-center">
-        {loading ? (
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-white mx-auto"></div>
-        ) : (
-          <>
-            <div className="text-6xl font-black text-white/50">?</div>
-            <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-4">Card</div>
-          </>
-        )}
+      <div className={`w-full h-full duration-500 preserve-3d relative ${loading ? 'transform-[rotateY(180deg)]' : 'group-hover:-translate-y-1'}`}>
+        {/* Front of card (Unassigned) */}
+        <div className={`absolute w-full h-full backface-hidden rounded-xl shadow-md p-6 flex flex-col items-center justify-center transition-colors ${
+          isClosed ? 'bg-slate-200' : 'bg-slate-900 border border-slate-700'
+        }`}>
+          <div className={`text-4xl font-black ${isClosed ? 'text-slate-400' : 'text-slate-100'}`}>?</div>
+          <div className={`text-xs font-bold uppercase tracking-widest mt-4 ${isClosed ? 'text-slate-500' : 'text-slate-400'}`}>
+            {isClosed ? 'Locked' : 'Tap to Reveal'}
+          </div>
+        </div>
+        
+        {/* Back of card (Loading state) */}
+        <div className="absolute w-full h-full backface-hidden transform-[rotateY(180deg)] rounded-xl shadow-md p-6 flex items-center justify-center bg-blue-50 border border-blue-100">
+           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     </div>
   );
