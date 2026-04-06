@@ -47,7 +47,7 @@ export default function RootLayout({
       <body className="font-sans antialiased text-slate-800 bg-slate-50">
         <Navbar />
         {children}
-        <BottomNav />
+        {/* <BottomNav /> */}
         <Analytics />
       </body>
     </html>
