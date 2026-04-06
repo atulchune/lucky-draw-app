@@ -120,6 +120,29 @@ export default function ContestClient({
     }
   };
 
+  const handleRemoveWinner = async (positionId: string) => {
+    if (!isCreator || contestStatus !== 'open') return;
+
+    setLoadingCardId(positionId);
+    try {
+      const { error } = await supabase
+        .from('positions')
+        .update({ winner_rank: null })
+        .eq('id', positionId);
+
+      if (error) throw error;
+
+      setPositions(prev =>
+        prev.map(p => p.id === positionId ? { ...p, winner_rank: null } : p)
+      );
+    } catch (err) {
+      console.error('Error removing winner:', err);
+      alert('Failed to remove winner');
+    } finally {
+      setLoadingCardId(null);
+    }
+  };
+
   // Find all unique teams
   const teams = Array.from(new Set(positions.map(p => p.team_name)));
 
@@ -130,7 +153,7 @@ export default function ContestClient({
       clipboardText += `--- ${team} ---\n`;
       const teamPositions = positions.filter(p => p.team_name === team).sort((a, b) => a.position_number - b.position_number);
       teamPositions.forEach(p => {
-        const name = p.profiles?.full_name || p.assigned_user_id ? 'Participant' : 'Unassigned';
+        const name = p.profiles?.full_name || 'Participant';
         if (p.assigned_user_id) {
           clipboardText += `Position ${p.position_number}: ${name}${p.winner_rank ? ` (Rank ${p.winner_rank})` : ''}\n`;
         }
@@ -147,9 +170,14 @@ export default function ContestClient({
 
   return (
     <div className="space-y-12">
+      {contestStatus === 'abandoned' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-bold text-center shadow-sm">
+          🚨 This contest was cancelled by the creator. Results are void.
+        </div>
+      )}
       {hasUserPickedCard && contestStatus === 'open' && (
-        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-6 py-4 rounded-lg font-bold text-center">
-          You have successfully locked your card! Wait for the creator to announce winners.
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-6 py-4 rounded-xl font-bold text-center shadow-sm">
+          ✅ You have successfully locked your card! Wait for the creator to announce winners.
         </div>
       )}
       
@@ -161,6 +189,7 @@ export default function ContestClient({
             onFlip={() => handleCardFlip(position.id)}
             isCreator={isCreator && contestStatus === 'open'}
             onMarkWinner={(rank) => handleMarkWinner(position.id, rank)}
+            onRemoveWinner={() => handleRemoveWinner(position.id)}
             loading={loadingCardId === position.id}
             isClosed={contestStatus !== 'open'}
           />
@@ -214,6 +243,7 @@ interface CardComponentProps {
   onFlip: () => void;
   isCreator: boolean;
   onMarkWinner: (rank: 1 | 2 | 3) => void;
+  onRemoveWinner: () => void;
   loading: boolean;
   isClosed: boolean;
 }
@@ -223,6 +253,7 @@ function CardComponent({
   onFlip,
   isCreator,
   onMarkWinner,
+  onRemoveWinner,
   loading,
   isClosed,
 }: CardComponentProps) {
@@ -243,9 +274,16 @@ function CardComponent({
           <div className="text-sm font-bold text-blue-600 bg-blue-50 py-1 rounded inline-block px-2">{name}</div>
           
           {isWinner && (
-            <div className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-black shadow-sm mx-auto w-max mt-2">
+            <button 
+              onClick={isCreator && !isClosed ? onRemoveWinner : undefined}
+              title={isCreator && !isClosed ? "Click to remove winner rank" : undefined}
+              className={`px-3 py-1 rounded-full text-xs font-black shadow-sm mx-auto w-max mt-2 transition-transform ${
+                isCreator && !isClosed ? 'hover:scale-105 active:scale-95 cursor-pointer bg-yellow-500 hover:bg-yellow-600' : 'bg-yellow-400'
+              } text-yellow-900 border-none`}
+            >
               {position.winner_rank === 1 ? '🥇 1st Place' : position.winner_rank === 2 ? '🥈 2nd Place' : '🥉 3rd Place'}
-            </div>
+              {isCreator && !isClosed && <span className="ml-1 opacity-75 font-semibold text-[10px]">(×)</span>}
+            </button>
           )}
         </div>
 
@@ -266,25 +304,29 @@ function CardComponent({
     );
   }
 
-  // Blind Card State
+  // Blind Card State with Flip Animation
   return (
     <div
       onClick={!isClosed && !loading ? onFlip : undefined}
-      className={`rounded-xl shadow-lg p-6 h-48 flex items-center justify-center transition-all ${
-        isClosed 
-          ? 'bg-slate-200 opacity-50 cursor-not-allowed' 
-          : 'bg-linear-to-br from-blue-500 to-indigo-600 cursor-pointer hover:shadow-2xl hover:scale-105 active:scale-95'
+      className={`relative w-full h-48 rounded-xl perspective-1000 ${
+        isClosed ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer group'
       }`}
     >
-      <div className="text-center">
-        {loading ? (
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-white mx-auto"></div>
-        ) : (
-          <>
-            <div className="text-6xl font-black text-white/50">?</div>
-            <div className="text-xs text-blue-100 font-bold uppercase tracking-widest mt-4">Card</div>
-          </>
-        )}
+      <div className={`w-full h-full duration-500 preserve-3d relative ${loading ? 'transform-[rotateY(180deg)]' : 'group-hover:-translate-y-1'}`}>
+        {/* Front of card (Unassigned) */}
+        <div className={`absolute w-full h-full backface-hidden rounded-xl shadow-md p-6 flex flex-col items-center justify-center transition-colors ${
+          isClosed ? 'bg-slate-200' : 'bg-slate-900 border border-slate-700'
+        }`}>
+          <div className={`text-4xl font-black ${isClosed ? 'text-slate-400' : 'text-slate-100'}`}>?</div>
+          <div className={`text-xs font-bold uppercase tracking-widest mt-4 ${isClosed ? 'text-slate-500' : 'text-slate-400'}`}>
+            {isClosed ? 'Locked' : 'Tap to Reveal'}
+          </div>
+        </div>
+        
+        {/* Back of card (Loading state) */}
+        <div className="absolute w-full h-full backface-hidden transform-[rotateY(180deg)] rounded-xl shadow-md p-6 flex items-center justify-center bg-blue-50 border border-blue-100">
+           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     </div>
   );
