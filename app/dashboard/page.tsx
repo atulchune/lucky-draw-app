@@ -152,6 +152,11 @@ export default async function DashboardPage() {
                           {pos.winner_rank ? 'WON' : 'LOST'}
                         </div>
                       )}
+                      {contest.status === 'abandoned' && (
+                        <div className="absolute top-0 right-0 px-6 py-1 text-[10px] font-black tracking-wider text-white transform rotate-45 translate-x-5 translate-y-2 bg-red-400">
+                          CANCELED
+                        </div>
+                      )}
                       
                       <h3 className="text-lg font-bold mb-2 truncate pr-6">{contest.name}</h3>
                       
@@ -166,6 +171,10 @@ export default async function DashboardPage() {
                               Better luck next time.
                             </div>
                           )
+                        ) : contest.status === 'abandoned' ? (
+                          <div className="bg-red-50 text-red-700 px-3 py-2 rounded-xl text-sm font-medium">
+                            Contest was cancelled.
+                          </div>
                         ) : (
                           <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-xl text-sm justify-between flex items-center font-medium">
                             <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Ongoing</span>

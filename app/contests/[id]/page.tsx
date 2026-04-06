@@ -118,7 +118,8 @@ export default async function ContestDetailPage({
               </div>
             </div>
             {isCreator && contest.status === 'open' && (
-              <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
+              <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end gap-3">
+                 <ContestCancelButton contestId={id} />
                  <ContestCloseButton contestId={id} />
               </div>
             )}
@@ -143,7 +144,17 @@ function ContestCloseButton({ contestId }: { contestId: string }) {
   return (
     <form action={`/api/contests/${contestId}/close`} method="POST">
        <Button type="submit" className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-8 rounded-xl h-12 shadow-sm transition-transform active:scale-[0.98]">
-         Close Contest Event
+         Close Event
+       </Button>
+    </form>
+  )
+}
+
+function ContestCancelButton({ contestId }: { contestId: string }) {
+  return (
+    <form action={`/api/contests/${contestId}/cancel`} method="POST">
+       <Button type="submit" variant="outline" className="font-bold px-8 rounded-xl h-12 shadow-sm border-slate-200 text-slate-600 hover:bg-slate-100 transition-transform active:scale-[0.98]">
+         Cancel/Abandon
        </Button>
     </form>
   )

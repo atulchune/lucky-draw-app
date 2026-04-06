@@ -120,6 +120,29 @@ export default function ContestClient({
     }
   };
 
+  const handleRemoveWinner = async (positionId: string) => {
+    if (!isCreator || contestStatus !== 'open') return;
+
+    setLoadingCardId(positionId);
+    try {
+      const { error } = await supabase
+        .from('positions')
+        .update({ winner_rank: null })
+        .eq('id', positionId);
+
+      if (error) throw error;
+
+      setPositions(prev =>
+        prev.map(p => p.id === positionId ? { ...p, winner_rank: null } : p)
+      );
+    } catch (err) {
+      console.error('Error removing winner:', err);
+      alert('Failed to remove winner');
+    } finally {
+      setLoadingCardId(null);
+    }
+  };
+
   // Find all unique teams
   const teams = Array.from(new Set(positions.map(p => p.team_name)));
 
@@ -147,9 +170,14 @@ export default function ContestClient({
 
   return (
     <div className="space-y-12">
+      {contestStatus === 'abandoned' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-bold text-center shadow-sm">
+          🚨 This contest was cancelled by the creator. Results are void.
+        </div>
+      )}
       {hasUserPickedCard && contestStatus === 'open' && (
-        <div className="bg-blue-100 border-2 border-blue-400 text-blue-700 px-6 py-4 rounded-lg font-bold text-center">
-          You have successfully locked your card! Wait for the creator to announce winners.
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-6 py-4 rounded-xl font-bold text-center shadow-sm">
+          ✅ You have successfully locked your card! Wait for the creator to announce winners.
         </div>
       )}
       
@@ -161,6 +189,7 @@ export default function ContestClient({
             onFlip={() => handleCardFlip(position.id)}
             isCreator={isCreator && contestStatus === 'open'}
             onMarkWinner={(rank) => handleMarkWinner(position.id, rank)}
+            onRemoveWinner={() => handleRemoveWinner(position.id)}
             loading={loadingCardId === position.id}
             isClosed={contestStatus !== 'open'}
           />
@@ -214,6 +243,7 @@ interface CardComponentProps {
   onFlip: () => void;
   isCreator: boolean;
   onMarkWinner: (rank: 1 | 2 | 3) => void;
+  onRemoveWinner: () => void;
   loading: boolean;
   isClosed: boolean;
 }
@@ -223,6 +253,7 @@ function CardComponent({
   onFlip,
   isCreator,
   onMarkWinner,
+  onRemoveWinner,
   loading,
   isClosed,
 }: CardComponentProps) {
@@ -243,9 +274,16 @@ function CardComponent({
           <div className="text-sm font-bold text-blue-600 bg-blue-50 py-1 rounded inline-block px-2">{name}</div>
           
           {isWinner && (
-            <div className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-black shadow-sm mx-auto w-max mt-2">
+            <button 
+              onClick={isCreator && !isClosed ? onRemoveWinner : undefined}
+              title={isCreator && !isClosed ? "Click to remove winner rank" : undefined}
+              className={`px-3 py-1 rounded-full text-xs font-black shadow-sm mx-auto w-max mt-2 transition-transform ${
+                isCreator && !isClosed ? 'hover:scale-105 active:scale-95 cursor-pointer bg-yellow-500 hover:bg-yellow-600' : 'bg-yellow-400'
+              } text-yellow-900 border-none`}
+            >
               {position.winner_rank === 1 ? '🥇 1st Place' : position.winner_rank === 2 ? '🥈 2nd Place' : '🥉 3rd Place'}
-            </div>
+              {isCreator && !isClosed && <span className="ml-1 opacity-75 font-semibold text-[10px]">(×)</span>}
+            </button>
           )}
         </div>
 
