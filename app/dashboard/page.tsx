@@ -67,11 +67,11 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col justify-center">
             <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Wins</div>
-            <div className="text-3xl font-black text-slate-800">{(profile?.wins_first || 0) + (profile?.wins_second || 0) + (profile?.wins_third || 0)}</div>
+            <div className="text-3xl font-black text-slate-800">{profile?.total_wins || 0}</div>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col justify-center">
             <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Joined</div>
-            <div className="text-3xl font-black text-slate-800">{profile?.contests_participated || participatingContests?.length || 0}</div>
+            <div className="text-3xl font-black text-slate-800">{profile?.total_contests || participatingContests?.length || 0}</div>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col justify-center col-span-2 md:col-span-1">
             <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Created</div>

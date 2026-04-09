@@ -38,7 +38,7 @@ export async function POST(
     .eq('id', id);
 
   // Update User Stats
-  // 1. Fetch all participants to increment contests_participated
+  // 1. Fetch all participants to increment total_contests
   const { data: participants } = await adminSupabase
     .from('participants')
     .select('user_id')
@@ -48,20 +48,20 @@ export async function POST(
     for (const p of participants) {
       const { data: profile } = await adminSupabase
         .from('profiles')
-        .select('contests_participated')
+        .select('total_contests')
         .eq('id', p.user_id)
         .single();
       
       if (profile) {
         await adminSupabase
           .from('profiles')
-          .update({ contests_participated: (profile.contests_participated || 0) + 1 })
+          .update({ total_contests: (profile.total_contests || 0) + 1 })
           .eq('id', p.user_id);
       }
     }
   }
 
-  // 2. Fetch all winning positions to increment wins_first / wins_second / wins_third
+  // 2. Fetch all winning positions to increment total_wins
   const { data: winners } = await adminSupabase
     .from('positions')
     .select('assigned_user_id, winner_rank')
@@ -71,26 +71,17 @@ export async function POST(
 
   if (winners) {
     for (const w of winners) {
-      if (w.assigned_user_id && w.winner_rank) {
-        // Determine which column to increment based on rank
-        const columnMap: Record<number, string> = {
-          1: 'wins_first',
-          2: 'wins_second',
-          3: 'wins_third',
-        };
-        const column = columnMap[w.winner_rank];
-        if (!column) continue;
-
+      if (w.assigned_user_id) {
         const { data: profile } = await adminSupabase
           .from('profiles')
-          .select(column)
+          .select('total_wins')
           .eq('id', w.assigned_user_id)
           .single();
         
         if (profile) {
           await adminSupabase
             .from('profiles')
-            .update({ [column]: ((profile as any)[column] || 0) + 1 })
+            .update({ total_wins: (profile.total_wins || 0) + 1 })
             .eq('id', w.assigned_user_id);
         }
       }
