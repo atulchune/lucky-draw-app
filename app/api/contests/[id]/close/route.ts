@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
@@ -27,40 +28,41 @@ export async function POST(
     return NextResponse.redirect(new URL(`/contests/${id}`, request.url));
   }
 
+  // Use admin client to bypass RLS for cross-user profile updates
+  const adminSupabase = createAdminClient();
+
   // Update contest status
-  await supabase
+  await adminSupabase
     .from('contests')
     .update({ status: 'closed', closed_at: new Date().toISOString() })
     .eq('id', id);
 
   // Update User Stats
-  // 1. Fetch all participants to increment total_contests
-  const { data: participants } = await supabase
+  // 1. Fetch all participants to increment contests_participated
+  const { data: participants } = await adminSupabase
     .from('participants')
     .select('user_id')
     .eq('contest_id', id);
 
   if (participants) {
     for (const p of participants) {
-      // Supabase does not have an easy increment, so we fetch and update.
-      // Wait, we can use RPC if we had it, but let's just do it directly or using a simple strategy.
-      const { data: profile } = await supabase
+      const { data: profile } = await adminSupabase
         .from('profiles')
-        .select('total_contests')
+        .select('contests_participated')
         .eq('id', p.user_id)
         .single();
       
       if (profile) {
-        await supabase
+        await adminSupabase
           .from('profiles')
-          .update({ total_contests: (profile.total_contests || 0) + 1 })
+          .update({ contests_participated: (profile.contests_participated || 0) + 1 })
           .eq('id', p.user_id);
       }
     }
   }
 
-  // 2. Fetch all winning positions to increment total_wins
-  const { data: winners } = await supabase
+  // 2. Fetch all winning positions to increment wins_first / wins_second / wins_third
+  const { data: winners } = await adminSupabase
     .from('positions')
     .select('assigned_user_id, winner_rank')
     .eq('contest_id', id)
@@ -69,17 +71,26 @@ export async function POST(
 
   if (winners) {
     for (const w of winners) {
-      if (w.assigned_user_id) {
-        const { data: profile } = await supabase
+      if (w.assigned_user_id && w.winner_rank) {
+        // Determine which column to increment based on rank
+        const columnMap: Record<number, string> = {
+          1: 'wins_first',
+          2: 'wins_second',
+          3: 'wins_third',
+        };
+        const column = columnMap[w.winner_rank];
+        if (!column) continue;
+
+        const { data: profile } = await adminSupabase
           .from('profiles')
-          .select('total_wins')
+          .select(column)
           .eq('id', w.assigned_user_id)
           .single();
         
         if (profile) {
-          await supabase
+          await adminSupabase
             .from('profiles')
-            .update({ total_wins: (profile.total_wins || 0) + 1 })
+            .update({ [column]: ((profile as any)[column] || 0) + 1 })
             .eq('id', w.assigned_user_id);
         }
       }
