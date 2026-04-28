@@ -52,6 +52,45 @@ export default async function DashboardPage() {
     return userPositions?.find(p => p.contest_id === contestId);
   };
 
+  // Build a list of all contest IDs we need position counts for
+  const allContestIds = [
+    ...(availableContests?.map(c => c.id) || []),
+    ...(participatingContests?.map((p: any) => p.contests?.id).filter(Boolean) || []),
+  ];
+  const uniqueContestIds = [...new Set(allContestIds)];
+
+  // Fetch which available contests the user has already joined
+  let userJoinedAvailable: string[] = [];
+  const availableIds = availableContests?.map(c => c.id) || [];
+  if (availableIds.length > 0) {
+    const { data: joinedData } = await supabase
+      .from('participants')
+      .select('contest_id')
+      .eq('user_id', user.id)
+      .in('contest_id', availableIds);
+    userJoinedAvailable = joinedData?.map(j => j.contest_id) || [];
+  }
+
+  // Fetch position counts (total & opened) for all relevant contests
+  let positionCountsByContest: Record<string, { total: number; opened: number }> = {};
+  if (uniqueContestIds.length > 0) {
+    const { data: allPositions } = await supabase
+      .from('positions')
+      .select('contest_id, assigned_user_id')
+      .in('contest_id', uniqueContestIds);
+
+    if (allPositions) {
+      for (const pos of allPositions) {
+        if (!positionCountsByContest[pos.contest_id]) {
+          positionCountsByContest[pos.contest_id] = { total: 0, opened: 0 };
+        }
+        positionCountsByContest[pos.contest_id].total++;
+        if (pos.assigned_user_id) {
+          positionCountsByContest[pos.contest_id].opened++;
+        }
+      }
+    }
+  }
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 md:pb-12">
       <div className="container mx-auto py-8 md:py-12 px-4 max-w-5xl">
@@ -103,26 +142,63 @@ export default async function DashboardPage() {
               View All &rarr;
             </Link>
           </div>
-          
+
           {availableContests && availableContests.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availableContests.map((contest: any) => (
+              {availableContests.map((contest: any) => {
+                const isJoined = userJoinedAvailable.includes(contest.id);
+                const counts = positionCountsByContest[contest.id] || { total: contest.num_positions * 2, opened: 0 };
+                const totalCards = counts.total;
+                const openedCards = counts.opened;
+                const progressPercent = totalCards > 0 ? Math.round((openedCards / totalCards) * 100) : 0;
+
+                return (
                 <Link href={`/contests/${contest.id}`} key={contest.id} className="block group">
                   <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group-active:scale-[0.98]">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg font-bold truncate pr-4">{contest.name}</h3>
-                      <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-1 bg-green-50 text-green-600 rounded-md">
-                        OPEN
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isJoined && (
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 bg-blue-50 text-blue-600 rounded-md flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            JOINED
+                          </span>
+                        )}
+                        <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-1 bg-green-50 text-green-600 rounded-md">
+                          OPEN
+                        </span>
+                      </div>
                     </div>
                     <p className="text-slate-500 text-sm mb-4 line-clamp-2">{contest.description || 'Join this contest and test your luck!'}</p>
+
+                    {/* Card Progress */}
+                    <div className="mb-3">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cards Opened</span>
+                        <span className="text-xs font-bold text-slate-600">{openedCards} / {totalCards}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            progressPercent >= 80 ? 'bg-amber-400' : progressPercent >= 50 ? 'bg-blue-400' : 'bg-emerald-400'
+                          }`}
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex justify-between items-center pt-3 border-t border-slate-50">
-                      <div className="text-xs font-semibold text-slate-400">{contest.num_positions * 2} Cards Total</div>
-                      <div className="text-sm font-bold text-blue-600">Join Now</div>
+                      <div className="text-xs font-semibold text-slate-400">{totalCards} Cards Total</div>
+                      {isJoined ? (
+                        <span className="text-xs font-bold text-blue-600">✅ Joined</span>
+                      ) : (
+                        <span className="text-sm font-bold text-blue-600">Join Now</span>
+                      )}
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-100 border-dashed p-8 text-center">
@@ -140,15 +216,18 @@ export default async function DashboardPage() {
                 const contest = participation.contests;
                 if (!contest) return null;
                 const pos = getPositionForContest(contest.id);
+                const counts = positionCountsByContest[contest.id] || { total: contest.num_positions * 2, opened: 0 };
+                const totalCards = counts.total;
+                const openedCards = counts.opened;
+                const progressPercent = totalCards > 0 ? Math.round((openedCards / totalCards) * 100) : 0;
 
                 return (
                   <Link href={`/contests/${contest.id}`} key={contest.id} className="block group">
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-all duration-300 group-active:scale-[0.98] relative overflow-hidden flex flex-col h-full">
                       {/* Ribbon */}
                       {contest.status === 'closed' && pos && (
-                        <div className={`absolute top-0 right-0 px-6 py-1 text-[10px] font-black tracking-wider text-white transform rotate-45 translate-x-5 translate-y-2 ${
-                          pos.winner_rank ? 'bg-amber-400' : 'bg-slate-300'
-                        }`}>
+                        <div className={`absolute top-0 right-0 px-6 py-1 text-[10px] font-black tracking-wider text-white transform rotate-45 translate-x-5 translate-y-2 ${pos.winner_rank ? 'bg-amber-400' : 'bg-slate-300'
+                          }`}>
                           {pos.winner_rank ? 'WON' : 'LOST'}
                         </div>
                       )}
@@ -157,9 +236,25 @@ export default async function DashboardPage() {
                           CANCELED
                         </div>
                       )}
-                      
+
                       <h3 className="text-lg font-bold mb-2 truncate pr-6">{contest.name}</h3>
-                      
+
+                      {/* Card Progress */}
+                      <div className="mb-3">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cards Opened</span>
+                          <span className="text-xs font-bold text-slate-600">{openedCards} / {totalCards}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              progressPercent >= 80 ? 'bg-amber-400' : progressPercent >= 50 ? 'bg-blue-400' : 'bg-emerald-400'
+                            }`}
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
                       <div className="grow mt-2">
                         {contest.status === 'closed' && pos ? (
                           pos.winner_rank ? (

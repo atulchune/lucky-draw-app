@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import ContestClient from './contest-client';
+import { decryptPosition } from '@/lib/crypto';
 
 export default async function ContestDetailPage({
   params,
@@ -49,6 +50,14 @@ export default async function ContestDetailPage({
   if (posError) console.error("Positions fetch error:", posError);
 
   let positions = positionsData || [];
+
+  // Decrypt encrypted position numbers from DB
+  positions = positions.map(p => ({
+    ...p,
+    position_number: typeof p.position_number === 'string' && p.position_number.length > 5
+      ? decryptPosition(p.position_number)  // Decrypt encrypted value
+      : Number(p.position_number),           // Fallback for legacy plain numbers
+  }));
   
   // Hydrate profiles manually
   const assigned_ids = positions.map(p => p.assigned_user_id).filter(Boolean);

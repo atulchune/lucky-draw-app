@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { decryptPosition } from '@/lib/crypto';
 
 export default async function HistoryPage() {
   const supabase = await createClient();
@@ -35,9 +36,21 @@ export default async function HistoryPage() {
   const contestResults = userPositions?.reduce((acc: any, pos: any) => {
     const contestId = pos.contests.id;
     if (!acc[contestId]) {
+      // Decrypt position number
+      let posNum = pos.position_number;
+      if (typeof posNum === 'string' && posNum.length > 5) {
+        try {
+          posNum = decryptPosition(posNum);
+        } catch {
+          posNum = Number(posNum) || 0;
+        }
+      } else {
+        posNum = Number(posNum);
+      }
+
       acc[contestId] = {
         contest: pos.contests,
-        position: pos.position_number,
+        position: posNum,
         team: pos.team_name,
         rank: pos.winner_rank,
       };
