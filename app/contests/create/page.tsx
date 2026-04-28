@@ -45,46 +45,27 @@ export default function CreateContestPage() {
         return;
       }
 
-      // Create contest
-      const { data: contest, error: contestError } = await supabase
-        .from('contests')
-        .insert([
-          {
-            creator_id: user.id,
-            name: formData.name,
-            description: formData.description,
-            team1_name: formData.team1_name,
-            team2_name: formData.team2_name,
-            num_positions: formData.num_positions,
-            status: 'open',
-          },
-        ])
-        .select()
-        .single();
+      // Call server API for encrypted position creation
+      const response = await fetch('/api/contests/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          team1_name: formData.team1_name,
+          team2_name: formData.team2_name,
+          num_positions: formData.num_positions,
+        }),
+      });
 
-      if (contestError) throw contestError;
+      const result = await response.json();
 
-      // Create positions for both teams
-      const positions = [];
-      for (let i = 1; i <= formData.num_positions; i++) {
-        positions.push({
-          contest_id: contest.id,
-          team_name: formData.team1_name,
-          position_number: i,
-        });
-        positions.push({
-          contest_id: contest.id,
-          team_name: formData.team2_name,
-          position_number: i,
-        });
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create contest');
       }
 
-      const { error: positionError } = await supabase.from('positions').insert(positions);
-
-      if (positionError) throw positionError;
-
       // Redirect to contest details
-      router.push(`/contests/${contest.id}`);
+      router.push(`/contests/${result.contest_id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create contest');
       console.error(err);

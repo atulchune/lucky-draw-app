@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.contest_positions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   contest_id UUID NOT NULL REFERENCES public.contests(id) ON DELETE CASCADE,
   team_name TEXT NOT NULL,
-  position_number INTEGER NOT NULL,
+  position_number TEXT NOT NULL, -- AES-256-GCM encrypted position number
   assigned_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   assigned_user_name TEXT,
   winner_rank INTEGER, -- 1 for 1st, 2 for 2nd, 3 for 3rd
